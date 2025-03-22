@@ -1,59 +1,141 @@
-https://short-video-production.up.railway.app/files?apikey=oioi
-
-Response json
-{
-  "success": true,
-  "count": 2,
-  "files": [
-    {
-      "filename": "bef206556b6cc6f52e7e0a5e112b12bb.mp4",
-      "url": "https://short-video-production.up.railway.app/video/bef206556b6cc6f52e7e0a5e112b12bb.mp4",
-      "size": 8559347,
-      "uploadedAt": "2025-03-21T23:19:07.118+07:00",
-      "expiresAt": null,
-      "isPermanent": true,
-      "mimetype": "video/mp4",
-      "likes": 6,
-      "comments": [
-        {
-          "text": "keren bg",
-          "timestamp": "Friday, March 21, 2025 at 11:21:05 PM GMT+7"
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Short Video App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
         }
-      ],
-      "title": "Moon light"
-    },
-    {
-      "filename": "51ce9e7173ccef2d33ac6db73ef2a8c1.mp4",
-      "url": "https://short-video-production.up.railway.app/video/51ce9e7173ccef2d33ac6db73ef2a8c1.mp4",
-      "size": 8697200,
-      "uploadedAt": "2025-03-21T23:14:33.722+07:00",
-      "expiresAt": "2025-03-22T00:14:33.724+07:00",
-      "isPermanent": false,
-      "mimetype": "video/mp4",
-      "likes": 5,
-      "comments": [
-        {
-          "text": "apalah",
-          "timestamp": "Friday, March 21, 2025 at 11:15:57 PM GMT+7"
-        },
-        {
-          "text": "cool",
-          "timestamp": "Friday, March 21, 2025 at 11:16:13 PM GMT+7"
-        },
-        {
-          "text": "one piece",
-          "timestamp": "Friday, March 21, 2025 at 11:16:23 PM GMT+7"
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
-      ],
-      "title": "Naruto"
-    }
-  ]
-}
+    </style>
+</head>
+<body class="bg-black text-white">
+    <div id="app" class="h-full w-full overflow-hidden relative">
+        <!-- Video Container -->
+        <div id="video-container" class="h-full w-full overflow-y-scroll snap-y snap-mandatory">
+            <!-- Videos will be appended here by JavaScript -->
+        </div>
+    </div>
 
-Contoh tambah like
+    <!-- Comment Modal -->
+    <div id="comment-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden">
+        <div class="bg-white text-black p-4 rounded-lg w-3/4 max-w-lg">
+            <h2 class="text-lg font-bold mb-4">Comments</h2>
+            <ul id="comment-list" class="mb-4">
+                <!-- Comments will be appended here by JavaScript -->
+            </ul>
+            <input type="text" id="new-comment" class="w-full p-2 border border-gray-300 rounded mb-2" placeholder="Add a comment...">
+            <button id="add-comment-btn" class="bg-blue-500 text-white px-4 py-2 rounded">Add Comment</button>
+            <button id="close-modal-btn" class="bg-red-500 text-white px-4 py-2 rounded mt-2">Close</button>
+        </div>
+    </div>
 
-https://short-video-production.up.railway.app/like?video=bef206556b6cc6f52e7e0a5e112b12bb.mp4
+    <script>
+        const apiUrl = 'https://short-video-production.up.railway.app/files?apikey=oioi';
+        const likeUrl = 'https://short-video-production.up.railway.app/like?video=';
+        const commentUrl = 'https://short-video-production.up.railway.app/comment?text=';
 
-Contoh tambah comment 
+        let currentVideoFilename = '';
 
-https://short-video-production.up.railway.app/comment?text=keren%20bg&video=bef206556b6cc6f52e7e0a5e112b12bb.mp4
+        async function fetchVideos() {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            return data.files;
+        }
+
+        function createVideoElement(videoData) {
+            const videoWrapper = document.createElement('div');
+            videoWrapper.className = 'relative h-full w-full snap-start';
+
+            const video = document.createElement('video');
+            video.src = videoData.url;
+            video.autoplay = true;
+            video.loop = true;
+            video.muted = true;
+            video.className = 'h-full w-full object-cover';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent flex justify-between items-end';
+
+            const title = document.createElement('h2');
+            title.className = 'text-lg font-bold';
+            title.textContent = videoData.title;
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'flex flex-col items-center space-y-4';
+
+            const likeButton = document.createElement('button');
+            likeButton.className = 'text-white text-2xl';
+            likeButton.innerHTML = `<i class="fas fa-heart"></i> ${videoData.likes}`;
+            likeButton.onclick = () => addLike(videoData.filename, likeButton);
+
+            const commentButton = document.createElement('button');
+            commentButton.className = 'text-white text-2xl';
+            commentButton.innerHTML = `<i class="fas fa-comment"></i> ${videoData.comments.length}`;
+            commentButton.onclick = () => showComments(videoData.filename, videoData.comments);
+
+            buttonContainer.appendChild(likeButton);
+            buttonContainer.appendChild(commentButton);
+
+            overlay.appendChild(title);
+            overlay.appendChild(buttonContainer);
+
+            videoWrapper.appendChild(video);
+            videoWrapper.appendChild(overlay);
+
+            return videoWrapper;
+        }
+
+        async function addLike(filename, likeButton) {
+            await fetch(likeUrl + filename);
+            const currentLikes = parseInt(likeButton.textContent.split(' ')[1]);
+            likeButton.innerHTML = `<i class="fas fa-heart"></i> ${currentLikes + 1}`;
+        }
+
+        function showComments(filename, comments) {
+            currentVideoFilename = filename;
+            const commentList = document.getElementById('comment-list');
+            commentList.innerHTML = '';
+            comments.forEach(comment => {
+                const commentItem = document.createElement('li');
+                commentItem.textContent = `${comment.text} - ${comment.timestamp}`;
+                commentList.appendChild(commentItem);
+            });
+            document.getElementById('comment-modal').classList.remove('hidden');
+        }
+
+        async function addComment() {
+            const commentText = document.getElementById('new-comment').value;
+            if (commentText) {
+                await fetch(commentUrl + encodeURIComponent(commentText) + '&video=' + currentVideoFilename);
+                location.reload();
+            }
+        }
+
+        document.getElementById('add-comment-btn').onclick = addComment;
+        document.getElementById('close-modal-btn').onclick = () => {
+            document.getElementById('comment-modal').classList.add('hidden');
+        };
+
+        async function init() {
+            const videos = await fetchVideos();
+            const videoContainer = document.getElementById('video-container');
+            videos.forEach(videoData => {
+                const videoElement = createVideoElement(videoData);
+                videoContainer.appendChild(videoElement);
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
