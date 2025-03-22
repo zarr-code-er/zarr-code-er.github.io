@@ -20,7 +20,6 @@
 </head>
 <body class="bg-black text-white">
     <div id="app" class="h-full w-full overflow-hidden relative">
-        <!-- Video Container -->
         <div id="video-container" class="h-full w-full overflow-y-scroll snap-y snap-mandatory">
             <!-- Videos will be appended here by JavaScript -->
         </div>
@@ -45,6 +44,7 @@
         const commentUrl = 'https://short-video-production.up.railway.app/comment?text=';
 
         let currentVideoFilename = '';
+        let currentPlayingVideo = null;
 
         async function fetchVideos() {
             const response = await fetch(apiUrl);
@@ -58,33 +58,48 @@
 
             const video = document.createElement('video');
             video.src = videoData.url;
-            video.autoplay = true;
+            video.autoplay = false;
             video.loop = true;
             video.muted = true;
             video.className = 'h-full w-full object-cover';
 
             const overlay = document.createElement('div');
-            overlay.className = 'absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent flex justify-between items-end';
+            overlay.className = 'absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent flex justify-between items-center';
 
             const title = document.createElement('h2');
-            title.className = 'text-lg font-bold';
+            title.className = 'text-lg font-bold mb-2';
             title.textContent = videoData.title;
 
             const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'flex flex-col items-center space-y-4';
+            buttonContainer.className = 'flex flex-col items-center space-y-2 mr-4';
 
+            // Like Button
             const likeButton = document.createElement('button');
             likeButton.className = 'text-white text-2xl';
             likeButton.innerHTML = `<i class="fas fa-heart"></i> ${videoData.likes}`;
             likeButton.onclick = () => addLike(videoData.filename, likeButton);
 
+            // Comment Button
             const commentButton = document.createElement('button');
             commentButton.className = 'text-white text-2xl';
             commentButton.innerHTML = `<i class="fas fa-comment"></i> ${videoData.comments.length}`;
             commentButton.onclick = () => showComments(videoData.filename, videoData.comments);
 
+            // Sound Button
+            const soundButton = document.createElement('button');
+            soundButton.className = 'text-white text-2xl';
+            soundButton.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            soundButton.onclick = () => {
+                video.muted = !video.muted;
+                soundButton.innerHTML = video.muted ? 
+                    '<i class="fas fa-volume-mute"></i>' : 
+                    '<i class="fas fa-volume-up"></i>';
+            };
+
+            // Append buttons
             buttonContainer.appendChild(likeButton);
             buttonContainer.appendChild(commentButton);
+            buttonContainer.appendChild(soundButton);
 
             overlay.appendChild(title);
             overlay.appendChild(buttonContainer);
@@ -93,6 +108,33 @@
             videoWrapper.appendChild(overlay);
 
             return videoWrapper;
+        }
+
+        function setupIntersectionObserver() {
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        const video = entry.target.querySelector('video');
+                        if (entry.isIntersecting) {
+                            if (currentPlayingVideo && currentPlayingVideo !== video) {
+                                currentPlayingVideo.pause();
+                            }
+                            video.play();
+                            currentPlayingVideo = video;
+                        } else {
+                            video.pause();
+                        }
+                    });
+                },
+                {
+                    root: document.querySelector('#video-container'),
+                    threshold: 0.8
+                }
+            );
+
+            document.querySelectorAll('#video-container > div').forEach(wrapper => {
+                observer.observe(wrapper);
+            });
         }
 
         async function addLike(filename, likeButton) {
@@ -133,6 +175,8 @@
                 const videoElement = createVideoElement(videoData);
                 videoContainer.appendChild(videoElement);
             });
+            
+            setupIntersectionObserver();
         }
 
         init();
